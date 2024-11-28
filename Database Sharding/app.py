@@ -21,10 +21,7 @@ sharding_strategy = ShardingFactory('range')
 db.init_app(app)
 
 def get_db_uri(user_id):
-    """
-    Sharding strategy based on user_id.
-    Shard 1: user_id <= 5, Shard 2: user_id > 5
-    """
+
     db_shard = sharding_strategy(user_id)
     return f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{db_shard}"
     
@@ -32,13 +29,14 @@ def get_db_uri(user_id):
 @app.route('/add_user', methods = ['POST'])
 def add_user():
     data = request.get_json()
+    user_id = data.get(user_id) #ideally this should be generated through a distributed framework (unique id)
     user_name = data.get('user_name')
     email = data.get('email')
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = get_db_uri(user_name)
+    app.config['SQLALCHEMY_DATABASE_URI'] = get_db_uri(user_id)
     db.create_scoped_session()
 
-    new_user = User(name = user_name, email = email)
+    new_user = User(user_id=user_id, name = user_name, email = email)
     db.session.add(new_user)
     db.session.commit()
 
@@ -47,10 +45,10 @@ def add_user():
 @app.route('/add_account',methods = ['POST'])
 def add_account():
     data = request.get_json()
+    user_id = data.get('user_id')
     balance = data.get('balance')
-    user_name = data.get('user_name')
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = get_db_uri(user_name)
+    app.config['SQLALCHEMY_DATABASE_URI'] = get_db_uri(user_id)
     db.create_scoped_session()
 
     new_account = Account(user_id=user_id, balance=balance)
@@ -63,7 +61,7 @@ def add_account():
 def get_account():
     user_id = request.args.get('user_id',type = int)
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = get_db_uri(user_name)
+    app.config['SQLALCHEMY_DATABASE_URI'] = get_db_uri(user_id)
 
     account = Account.query.filter_by(user_id = user_id)
 
